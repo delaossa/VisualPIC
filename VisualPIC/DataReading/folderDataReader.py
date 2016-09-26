@@ -19,6 +19,7 @@
 
 import os
 import h5py
+import fnmatch
 
 from VisualPIC.DataHandling.species import Species
 from VisualPIC.DataHandling.rawDataSet import RawDataSet
@@ -33,12 +34,12 @@ class FolderDataReader:
         self._dataLocation = ""
         self._simulationCode = ""
         self.CreateCodeDictionaries()
-    
+
     def CreateCodeDictionaries(self):
         self._codeName = {"MS":"Osiris",
-                           "Something":"HiPACE"}
+                           "DATA":"HiPACE"}
         self._loadDataFrom = {"Osiris": self.LoadOsirisData,
-                               "HiPACE": self.LoadHiPaceData}
+                               "HiPACE": self.LoadHiPACEData}
     def SetDataLocation(self, dataLocation):
         self._dataLocation = dataLocation
 
@@ -145,6 +146,33 @@ class FolderDataReader:
                                 self.AddRawDataToSpecies(species, RawDataSet(self._simulationCode, dataSetName, dataSetLocation, totalTimeSteps, species, dataSetName))
                         file_content.close()
 
-    def LoadHiPaceData(self):
+    def LoadHiPACEData(self):
         """HiPACE loader"""
-        raise NotImplementedError
+
+        datalist = fnmatch.filter(os.listdir(self._dataLocation), "raw_*")
+        raw_data_list = list()
+
+        prefix_offset = 4
+        suffix_offset = -10
+
+        for raw_file in datalist:
+            raw_data_list.append(raw_file[prefix_offset: suffix_offset])
+
+        speciesNames = set(raw_data_list)
+
+        for sname in speciesNames:
+            self.AddSpecies(Species(sname))
+
+            dataSetLocation = self._dataLocation
+            filefilter = '*' + sname + '*'
+            speciesDataFiles = fnmatch.filter(datalist, filefilter)
+            speciesDataFiles.sort()
+            totalTimeSteps = len(speciesDataFiles)
+            file_path = os.path.join(self._dataLocation, speciesDataFiles[0])
+
+            file_content = h5py.File(file_path, 'r')
+            for dataSetName in list(file_content):
+                raw_dset = RawDataSet(self._simulationCode, dataSetName,
+                                      dataSetLocation, totalTimeSteps,
+                                      sname, dataSetName)
+                self.AddRawDataToSpecies(sname, raw_dset)

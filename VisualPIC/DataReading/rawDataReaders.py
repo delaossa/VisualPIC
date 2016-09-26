@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-#Copyright 2016 ?ngel Ferran Pousa
+#Copyright 2016 Ángel Ferran Pousa
 #
 #This file is part of VisualPIC.
 #
@@ -18,6 +18,7 @@
 #along with VisualPIC.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import os
 import abc
 import sys
 import h5py
@@ -75,7 +76,15 @@ class HiPACERawDataReader(RawDataReaderBase):
         RawDataReaderBase.__init__(self, location, speciesName, dataName, internalName)
 
     def OpenFileAndReadData(self):
-        raise NotImplementedError
+        file_content = self.OpenFile(self.currentTimeStep)
+        self.data = np.array(file_content.get(self.internalName))
+        file_content.close()
 
     def OpenFileAndReadUnits(self):
-        raise NotImplementedError
+        self.dataUnits = ""
+
+    def OpenFile(self, timeStep):
+        fileName = 'raw_{:}_{:06d}.h5'.format(self.speciesName, timeStep)
+        file_path = os.path.join(self.location, fileName)
+        file_content = h5py.File(file_path, 'r')
+        return file_content
