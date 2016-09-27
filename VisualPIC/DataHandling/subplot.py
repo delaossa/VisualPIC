@@ -18,6 +18,7 @@
 #along with VisualPIC.  If not, see <http://www.gnu.org/licenses/>.
 
 import copy
+import numpy as np
 
 class Subplot(object):
     def __init__(self, subplotPosition, colorMapsCollection, dataToPlot):
@@ -46,6 +47,9 @@ class Subplot(object):
         raise NotImplementedError   
                         
     def _LoadPossiblePlotTypes(self):
+        raise NotImplementedError
+
+    def _SetTimeSteps(self):
         raise NotImplementedError
             
     def _SetDefaultValues(self):
@@ -94,6 +98,9 @@ class Subplot(object):
         self.SetTitleProperty("AutoText", self.GetTitleProperty("DefaultAutoText"))
         
 # Interface methods
+    def GetTimeSteps(self):
+        return self._timeSteps
+    
     def GetAxesUnitsOptions(self):
         raise NotImplementedError
             
@@ -162,6 +169,7 @@ class FieldSubplot(Subplot):
     def __init__(self, subplotPosition, colorMapsCollection, dataToPlot):
         super(FieldSubplot, self).__init__(subplotPosition, colorMapsCollection, dataToPlot)
         self.dataType = "Field"
+        self._SetTimeSteps()
 
     # Initialization    
     def _SetSubplotName(self):
@@ -196,11 +204,20 @@ class FieldSubplot(Subplot):
         self.SetAxisProperty("x", "DefaultLabelFontSize", defaultFontSize)
         self.SetAxisProperty("y", "DefaultLabelFontSize", defaultFontSize)
 
+    def _SetTimeSteps(self):
+        i = 0
+        for dataElementToPlot in self.dataToPlot:
+            if i == 0:
+                self._timeSteps = dataElementToPlot.GetProperty("timeSteps")
+            else :
+                self._timeSteps = np.intersect1d(self._timeSteps, dataElementToPlot.GetProperty("timeSteps"))
+
     # Interface methods
     def AddFieldToPlot(self, fieldToPlot):
         self.dataToPlot.append(fieldToPlot)
         self._SetSubplotName()
         self._SetPlottedSpeciesName()
+        self._SetTimeSteps()
     
     def GetAxesUnitsOptions(self):
         unitsOptions = {}
@@ -231,6 +248,7 @@ class RawDataSubplot(Subplot):
         self.plotProps = {}
         super(RawDataSubplot, self).__init__(subplotPosition, colorMapsCollection, dataToPlot)
         self.dataType = "Raw"
+        self._SetTimeSteps()
 
     # Initialization    
     def _SetSubplotName(self):
@@ -298,6 +316,9 @@ class RawDataSubplot(Subplot):
             self.plotProps["ChargeUnits"] = self.plotProps["DefaultChargeUnits"]
         self.plotProps["CMap"] = self.plotProps["DefaultCMap"]
         self.plotProps["DisplayColorbar"] = self.plotProps["DefaultDisplayColorbar"]
+
+    def _SetTimeSteps(self):
+        self._timeSteps = self.dataToPlot["x"].GetProperty("timeSteps")
         
 # Interface methods
     def AddDataToPlot(self, data, axis):
@@ -305,6 +326,7 @@ class RawDataSubplot(Subplot):
         self.dataToPlot[axis] = data
         self._SetSubplotName()
         self._SetPlottedSpeciesName()
+        self._SetTimeSteps()
 
     def GetAxisColorMapOptions(self, plotType):
         if plotType == "Histogram":

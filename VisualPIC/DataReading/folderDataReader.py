@@ -20,6 +20,7 @@
 import os
 import h5py
 import fnmatch
+import numpy as np
 
 from VisualPIC.DataHandling.species import Species
 from VisualPIC.DataHandling.rawDataSet import RawDataSet
@@ -29,6 +30,7 @@ from VisualPIC.DataHandling.field import Field
 
 class FolderDataReader:
     """Scans the simulation folder and creates all the necessary species, fields and rawDataSets objects"""
+
     def __init__(self, parentDataContainer):
         self._dataContainer = parentDataContainer
         self._dataLocation = ""
@@ -36,10 +38,13 @@ class FolderDataReader:
         self.CreateCodeDictionaries()
 
     def CreateCodeDictionaries(self):
-        self._codeName = {"MS":"Osiris",
-                           "DATA":"HiPACE"}
+        self._codeName = {"MS": "Osiris",
+                          "DATA": "HiPACE",
+                          "simOutput": "PIConGPU"}
         self._loadDataFrom = {"Osiris": self.LoadOsirisData,
-                               "HiPACE": self.LoadHiPACEData}
+                              "HiPACE": self.LoadHiPACEData,
+                              "PIConGPU": self.LoadPIConGPUData}
+
     def SetDataLocation(self, dataLocation):
         self._dataLocation = dataLocation
 
@@ -49,12 +54,13 @@ class FolderDataReader:
     """
     Data managing. Methods for adding the detected species, fields...
     """
+
     def AddSpecies(self, species):
         addSpecies = True
         # the species will not be added if it already exists
         for avSpecies in self._dataContainer._availableSpecies:
             if avSpecies.GetName() == species.GetName():
-                addSpecies =  False
+                addSpecies = False
         if addSpecies:
             self._dataContainer._availableSpecies.append(species)
 
@@ -73,12 +79,13 @@ class FolderDataReader:
             if species.GetName() == speciesName:
                 species.AddRawDataTags(tags)
 
-    def AddDomainField(self,field):
+    def AddDomainField(self, field):
         self._dataContainer._availableDomainFields.append(field)
 
     """
     Main data loader. It will automatically call the specific loader for a particular simulation code
     """
+
     def LoadData(self):
         self._DetectSimulationCodeName()
         self._loadDataFrom[self._simulationCode]()
@@ -91,9 +98,10 @@ class FolderDataReader:
     """
     Specific data loaders
     """
+
     def LoadOsirisData(self):
         """Osiris Loader"""
-        keyFolderNames = ["DENSITY", "FLD", "PHA", "RAW" ]
+        keyFolderNames = ["DENSITY", "FLD", "PHA", "RAW"]
         mainFolders = os.listdir(self._dataLocation)
         for folder in mainFolders:
             subDir = self._dataLocation + "/" + folder
@@ -104,19 +112,27 @@ class FolderDataReader:
                         self.AddSpecies(Species(species))
                         speciesFields = os.listdir(subDir + "/" + species)
                         for field in speciesFields:
-                            if os.path.isdir(os.path.join(subDir + "/" + species, field)):
+                            if os.path.isdir(
+                                    os.path.join(subDir + "/" + species,
+                                                 field)):
                                 fieldLocation = subDir + "/" + species + "/" + field
                                 fieldName = field
-                                totalTimeSteps = len(os.listdir(fieldLocation))
-                                self.AddFieldToSpecies(species, Field(self._simulationCode, fieldName, fieldLocation, totalTimeSteps, species))
+                                timeSteps = self.GetTimeStepsInOsirisLocation(
+                                    fieldLocation)
+                                self.AddFieldToSpecies(species, Field(
+                                    self._simulationCode, fieldName,
+                                    fieldLocation, timeSteps, species))
             elif folder == keyFolderNames[1]:
                 domainFields = os.listdir(subDir)
                 for field in domainFields:
                     if os.path.isdir(os.path.join(subDir, field)):
                         fieldLocation = subDir + "/" + field
                         fieldName = field
-                        totalTimeSteps = len(os.listdir(fieldLocation))
-                        self.AddDomainField(Field(self._simulationCode, fieldName, fieldLocation, totalTimeSteps))
+                        timeSteps = self.GetTimeStepsInOsirisLocation(
+                            fieldLocation)
+                        self.AddDomainField(
+                            Field(self._simulationCode, fieldName,
+                                  fieldLocation, timeSteps))
             #elif folder ==  keyFolderNames[2]:
             #    phaseFields = os.listdir(subDir)
             #    for field in phaseFields:
@@ -129,25 +145,63 @@ class FolderDataReader:
             #                    fieldName = field
             #                    totalTimeSteps = len(os.listdir(fieldLocation))
             #                    self.AddFieldToSpecies(species, Field(fieldName, fieldLocation, totalTimeSteps, species, simulationCode = self._codeName))
-            elif folder ==  keyFolderNames[3]:
+            elif folder == keyFolderNames[3]:
                 subDir = self._dataLocation + "/" + folder
                 speciesNames = os.listdir(subDir)
                 for species in speciesNames:
                     if os.path.isdir(os.path.join(subDir, species)):
                         self.AddSpecies(Species(species))
                         dataSetLocation = subDir + "/" + species
-                        totalTimeSteps = len(os.listdir(dataSetLocation))
+                        timeSteps = self.GetTimeStepsInOsirisLocation(
+                            dataSetLocation)
                         file_path = dataSetLocation + "/" + "RAW-" + species + "-000000.h5"
                         file_content = h5py.File(file_path, 'r')
                         for dataSetName in list(file_content):
                             if dataSetName == "tag":
-                                self.AddRawDataTagsToSpecies(species, RawDataTags(self._simulationCode, dataSetName, dataSetLocation, totalTimeSteps, species, dataSetName))
+                                self.AddRawDataTagsToSpecies(
+                                    species, RawDataTags(
+                                        self._simulationCode, dataSetName,
+                                        dataSetLocation, timeSteps, species,
+                                        dataSetName))
                             else:
-                                self.AddRawDataToSpecies(species, RawDataSet(self._simulationCode, dataSetName, dataSetLocation, totalTimeSteps, species, dataSetName))
+                                self.AddRawDataToSpecies(species, RawDataSet(
+                                    self._simulationCode, dataSetName,
+                                    dataSetLocation, timeSteps, species,
+                                    dataSetName))
                         file_content.close()
+
+    def GetTimeStepsInOsirisLocation(self, location):
+        fileNamesList = os.listdir(location)
+        # filter only .h5 files
+        h5Files = list()
+        for file in fileNamesList:
+            if file.endswith(".h5"):
+                h5Files.append(file)
+        timeSteps = np.zeros(len(h5Files))
+        i = 0
+        for file in h5Files:
+            timeStep = int(file[-9:-3])
+            timeSteps[i] = timeStep
+            i += 1
+        return timeSteps.astype(np.int64)
 
     def LoadHiPACEData(self):
         """HiPACE loader"""
+        """
+        HOW TO USE:
+
+        This function has to scan the folder where the simulation data is stored.
+        It will create a Species, Field, RawDataSet or RawDataTags object for each
+        species, field, raw (particle) data set and particle tags found in the folder.
+
+        To add this data into the dataContainer the following functions have to be used:
+
+        self.AddSpecies(..)
+        self.AddFieldToSpecies(..)
+        self.AddDomainField(..)
+        self.AddRawDataToSpecies(..)
+        self.AddRawDataTagsToSpecies(..)
+        """
 
         datalist = fnmatch.filter(os.listdir(self._dataLocation), "raw_*")
         raw_data_list = list()
@@ -156,7 +210,7 @@ class FolderDataReader:
         suffix_offset = -10
 
         for raw_file in datalist:
-            raw_data_list.append(raw_file[prefix_offset: suffix_offset])
+            raw_data_list.append(raw_file[prefix_offset:suffix_offset])
 
         speciesNames = set(raw_data_list)
 
@@ -173,6 +227,10 @@ class FolderDataReader:
             file_content = h5py.File(file_path, 'r')
             for dataSetName in list(file_content):
                 raw_dset = RawDataSet(self._simulationCode, dataSetName,
-                                      dataSetLocation, totalTimeSteps,
-                                      sname, dataSetName)
+                                      dataSetLocation, totalTimeSteps, sname,
+                                      dataSetName)
                 self.AddRawDataToSpecies(sname, raw_dset)
+
+    def LoadPIConGPUData(self):
+        """PIConGPU loader"""
+        raise NotImplementedError

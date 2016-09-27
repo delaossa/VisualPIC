@@ -56,7 +56,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
         self.setupUi(self)
-        self.unitConverter = unitConverters.OsirisUnitConverter()
         self.dataContainer = DataContainer()
         self.colorMapsCollection = ColorMapsCollection()
         self.dataPlotter = DataPlotter(self.colorMapsCollection)
@@ -69,6 +68,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.increaseRowsColumnsCounter = 0
         self.speciesFieldPlotDimension = "2D"
         self.domainFieldPlotDimension = "2D"
+        """ Backups for removed UI items for each simulation code """
+        self.removedNormalizationTab = None
+        self.timeSteps = np.zeros(1)
 
     def CreateCanvasAndFigure(self):
         self.figure = Figure()
@@ -109,7 +111,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.plot_pushButton.clicked.connect(self.PlotButton_Clicked)
         self.actionParticle_Tracker.triggered.connect(self.ActionParticleTracker_Toggled)
         self.actionMake_video.triggered.connect(self.ActionMakeVideo_Toggled)
-        self.normalizedUnits_checkBox.toggled.connect(self.NormalizedUnitsCheckBox_StatusChanged)
         self.setNormalization_Button.clicked.connect(self.SetNormalizationButton_Clicked)
         self.addRawField_Button.clicked.connect(self.AddRawFieldButton_Clicked)
 
@@ -126,7 +127,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.SetSelectedSpeciesField()
 
     def TimeStepSlider_Released(self):
-        self.MakePlots()
+        if self.timeStep_Slider.value() in self.timeSteps:
+            self.MakePlots()
+        else:
+            val = self.timeStep_Slider.value()
+            closestHigher = self.timeSteps[np.where(self.timeSteps > val)[0][0]]
+            closestLower = self.timeSteps[np.where(self.timeSteps < val)[0][-1]]
+            if abs(val-closestHigher) < abs(val-closestLower):
+                self.timeStep_Slider.setValue(closestHigher)
+            else:
+                self.timeStep_Slider.setValue(closestLower)
+            self.MakePlots()
 
     def RowsSpinBox_ValueChanged(self):
         self.SetListOfPlotPositions()
@@ -136,22 +147,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def SetNormalizationButton_Clicked(self):
         n_p = float(self.plasmaDensity_lineEdit.text())
-        self.unitConverter.setPlasmaDensity(n_p)
-
-    def NormalizedUnitsCheckBox_StatusChanged(self):
-        if self.normalizedUnits_checkBox.checkState():
-            self.plasmaDensity_lineEdit.setEnabled(True)
-            self.setNormalization_Button.setEnabled(True)
-            self.unitConverter.allowNormUnits(True)
-        else:
-            self.plasmaDensity_lineEdit.setEnabled(False)
-            self.setNormalization_Button.setEnabled(False)
-            self.unitConverter.allowNormUnits(False)
+        self.unitConverter.SetNormalizationFactor(n_p)
 
     def LoadDataButton_Cicked(self):
         self.ClearData()
         self.dataContainer.ClearData()
         self.LoadFolderData()
+        self.unitConverter = unitConverters.UnitConverterSelector.GetUnitConverter(self.dataContainer.GetSimulationCodeName())
+        self.AdaptUIToSpecificSimulationCode()
+
+    def AdaptUIToSpecificSimulationCode(self):
+        simulationCode = self.dataContainer.GetSimulationCodeName()
+        codesWithNormalizedUnits = ["Osiris", "HiPACE"]
+        if simulationCode not in codesWithNormalizedUnits:
+            self.removedNormalizationTab = self.tabWidget_2.widget(2)
+            self.tabWidget_2.removeTab(2)
+        elif self.removedNormalizationTab != None:
+            self.tabWidget_2.addTab(self.removedNormalizationTab, "Normalization")
+            self.removedNormalizationTab = None
 
     def FolderLocationlineEdit_TextChanged(self):
         folderPath = str(self.folderLocation_lineEdit.text())
@@ -194,13 +207,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.timeStep_LineEdit.setText(str(self.timeStep_Slider.value()))
 
     def NextButton_Clicked(self):
-        ts = self.timeStep_Slider.value()
-        self.timeStep_Slider.setValue(ts + 1)
+        currentTimeStep = self.timeStep_Slider.value()
+        currentIndex = np.where(self.timeSteps == currentTimeStep)[0][0]
+        if currentIndex < len(self.timeSteps)-1:
+            self.timeStep_Slider.setValue(self.timeSteps[currentIndex + 1])
         self.MakePlots()
 
     def PrevButton_Clicked(self):
-        ts = self.timeStep_Slider.value()
-        self.timeStep_Slider.setValue(ts - 1)
+        currentTimeStep = self.timeStep_Slider.value()
+        currentIndex = np.where(self.timeSteps == currentTimeStep)[0][0]
+        if currentIndex > 0:
+            self.timeStep_Slider.setValue(self.timeSteps[currentIndex - 1])
         self.MakePlots()
 
     def AddRawFieldButton_Clicked(self):
@@ -258,7 +275,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.plotPosition_comboBox.addItems(positionsList)
 
     def AddRawDataSubplot(self, dataSets):
-        self.timeStep_Slider.setMaximum(dataSets["x"].GetProperty("totalTimeSteps")-1)
         plotPosition = len(self.subplotList)+1
         subplot = RawDataSubplot(plotPosition, self.colorMapsCollection, dataSets)
         self.subplotList.append(subplot)
@@ -268,6 +284,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         wid2.setSizeHint(QtCore.QSize(100, 40))
         self.fieldsToPlot_listWidget.addItem(wid2)
         self.fieldsToPlot_listWidget.setItemWidget(wid2, wid)
+        self.SetTimeSteps()
 
     def FillAvailableSpeciesList(self):
         model = QtGui.QStandardItemModel()
@@ -328,7 +345,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def AddFieldsToPlot(self, fields, fieldPlotDimension):
         fldList = list()
-        self.timeStep_Slider.setMaximum(fields[0].GetTotalTimeSteps()-1)
         for fld in fields:
             fieldToPlot = FieldToPlot(fld, fieldPlotDimension, self.unitConverter, self.colorMapsCollection, isPartOfMultiplot = len(fields)>1)
             fldList.append(fieldToPlot)
@@ -341,6 +357,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         wid2.setSizeHint(QtCore.QSize(100, 40))
         self.fieldsToPlot_listWidget.addItem(wid2)
         self.fieldsToPlot_listWidget.setItemWidget(wid2, wid)
+        self.SetTimeSteps()
 
     def SetAutoColumnsAndRows(self):
         rows = self.rows_spinBox.value()
@@ -397,7 +414,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         for subplot in self.subplotList:
             if subplot.GetPosition() > index+1:
                 subplot.SetPosition(subplot.GetPosition()-1)
-
         rows = self.rows_spinBox.value()
         columns = self.columns_spinBox.value()
         if len(self.subplotList) > 0:
@@ -409,3 +425,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 if len(self.subplotList) <= (rows-1)*columns:
                     self.DecreaseRows()
                     self.increaseRowsColumnsCounter -= 1
+        self.SetTimeSteps()
+
+    def SetTimeSteps(self):
+        i = 0
+        for subplot in self.subplotList:
+            if i == 0:
+                self.timeSteps = subplot.GetTimeSteps()
+            else :
+                self.timeSteps = np.intersect1d(self.timeSteps, subplot.GetTimeSteps())
+            i+=1
+        minTime = min(self.timeSteps)
+        maxTime = max(self.timeSteps)
+        self.timeStep_Slider.setMinimum(minTime)
+        self.timeStep_Slider.setMaximum(maxTime)

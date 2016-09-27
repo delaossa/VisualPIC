@@ -24,15 +24,15 @@ from VisualPIC.DataReading.dataReaderSelectors import FieldReaderSelector
 
 
 class Field(DataElement):
-    def __init__(self, simulationCode, name, location, totalTimeSteps, speciesName=""):
-        DataElement.__init__(self, simulationCode, name, location, totalTimeSteps, speciesName)
+    def __init__(self, simulationCode, name, location, timeSteps, speciesName=""):
+        DataElement.__init__(self, simulationCode, name, location, timeSteps, speciesName)
         self.dataReader = FieldReaderSelector.GetReader(simulationCode, location, speciesName, name)
           
     def GetFieldDimension(self):
         return self.dataReader.fieldDimension
 
     def GetAxisData(self, timeStep):
-        return self.dataReader.GetAxisData(timeStep)
+        return self.dataReader.GetAxisData(timeStep) #dictionary
         
     def GetAxisUnits(self):
         return self.dataReader.GetAxisUnits()

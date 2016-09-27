@@ -33,13 +33,15 @@ class DataContainer:
         # domain fields
         self._availableDomainFields = list()
         self._selectedDomainField = None
-        self._numberOfTimeSteps = 0
     
     def LoadData(self):
         self._folderDataReader.LoadData()
 
     def SetDataFolderLocation(self, folderLocation):
         self._folderDataReader.SetDataLocation(str(folderLocation))
+
+    def GetSimulationCodeName(self):
+        return self._simulationCode
                 
     def AddSelectedSpecies(self, speciesName):
         for species in self._availableSpecies:
@@ -59,7 +61,6 @@ class DataContainer:
         self._selectedSpeciesFields[:] = []
         for species in self._selectedSpecies:
             self._selectedSpeciesFields.append(species.GetField(self._selectedSpeciesFieldName))
-            self._numberOfTimeSteps = species.GetField(self._selectedSpeciesFieldName).GetTotalTimeSteps()
             
     def SetSelectedSpeciesField(self, fieldName):
         self._selectedSpeciesFieldName = fieldName
@@ -121,19 +122,11 @@ class DataContainer:
                 
     def GetFolderPath(self):
         return self._folderDataReader.GetDataLocation()
-    
-    def SetNumberOfTimeSteps(self, number):
-        if isinstance(number, int):
-            self._numberOfTimeSteps = number;
-            
-    def GetNumberOfTimeSteps(self):
-        return self._numberOfTimeSteps
         
     def SetSelectedDomainField(self, fieldName):
         for field in self._availableDomainFields:
             if field.GetName() == fieldName:
                 self._selectedDomainField = field
-                self._numberOfTimeSteps = self._selectedDomainField.GetTotalTimeSteps()
     
     def GetSelectedDomainField(self):
         # return a list to keep consistency with GetSelectedSpeciesFields()
@@ -170,4 +163,3 @@ class DataContainer:
         self._selectedSpecies = list()
         self._selectedDomainField = None
         self._selectedSpeciesFieldName = None
-        self._numberOfTimeSteps = 0

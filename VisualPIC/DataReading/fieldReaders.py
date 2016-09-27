@@ -34,7 +34,7 @@ class FieldReaderBase(DataReader):
         self.internalName = ""
         self.fieldDimension = ""
         self.axisUnits = {}
-        self.axisExtent = {}
+        self.axisData = {}
         self.ReadBasicData()
     
     def GetData(self, timeStep):
@@ -43,16 +43,27 @@ class FieldReaderBase(DataReader):
             self.OpenFileAndReadData()
         return self.data
 
+    def GetTime(self, timeStep):
+        if timeStep != self.currentTimeStep:
+            self.currentTimeStep = timeStep
+            self.OpenFileAndReadData()
+        return self.currentTime
+
+    def GetTimeUnits(self):
+        if self.timeUnits == "":
+            self.OpenFileAndReadUnits()
+        return self.timeUnits
+
     def GetDataUnits(self):
         if self.dataUnits == "":
             self.OpenFileAndReadUnits()
         return self.dataUnits
 
-    def GetAxisData(self):
+    def GetAxisData(self, timeStep):
         if timeStep != self.currentTimeStep:
             self.currentTimeStep = timeStep
             self.OpenFileAndReadData()
-        return self.axisExtent
+        return self.axisData
 
     def GetAxisUnits(self):
         if self.dataUnits == "":
@@ -94,10 +105,15 @@ class OsirisFieldReader(FieldReaderBase):
     def OpenFileAndReadData(self):
         file_content = self.OpenFile(self.currentTimeStep)
         self.data = np.array(file_content.get(self.internalName))
-        self.axisExtent["x"] = file_content.attrs['XMIN'][0], file_content.attrs['XMAX'][0]
-        self.axisExtent["y"] = file_content.attrs['XMIN'][1], file_content.attrs['XMAX'][1]
+        self.currentTime = file_content.attrs["TIME"][0]
+        matrixSize = self.data.shape
+        elementsX = matrixSize[-1] # number of elements in the longitudinal z direction
+        elementsY = matrixSize[-2] # number of elements in the transverse y direction
+        self.axisData["x"] = np.linspace(file_content.attrs['XMIN'][0], file_content.attrs['XMAX'][0], elementsX)
+        self.axisData["y"] = np.linspace(file_content.attrs['XMIN'][1], file_content.attrs['XMAX'][1], elementsY)
         if self.fieldDimension == "3D":
-            self.axisExtent["z"] = file_content.attrs['XMIN'][2], file_content.attrs['XMAX'][2]
+            elementsZ = matrixSize[-3] # number of elements in the transverse x direction
+            self.axisData["z"] = np.linspace(file_content.attrs['XMIN'][2], file_content.attrs['XMAX'][2], elementsZ)
         file_content.close()
 
     def OpenFileAndReadUnits(self):
@@ -106,10 +122,12 @@ class OsirisFieldReader(FieldReaderBase):
             self.axisUnits["x"] = str(list(file_content['/AXIS/AXIS1'].attrs["UNITS"])[0])
             self.axisUnits["y"] = str(list(file_content['/AXIS/AXIS2'].attrs["UNITS"])[0])
             self.dataUnits = str(list(file_content[self.internalName].attrs["UNITS"])[0])
+            self.timeUnits = str(file_content.attrs["TIME UNITS"][0])
         else:
             self.axisUnits["x"] = str(list(file_content['/AXIS/AXIS1'].attrs["UNITS"])[0])[2:-1].replace("\\\\","\\")
             self.axisUnits["y"] = str(list(file_content['/AXIS/AXIS2'].attrs["UNITS"])[0])[2:-1].replace("\\\\","\\")
             self.dataUnits = str(list(file_content[self.internalName].attrs["UNITS"])[0])[2:-1].replace("\\\\","\\")
+            self.timeUnits = str(file_content.attrs["TIME UNITS"][0])[2:-1].replace("\\\\","\\")
         file_content.close()
 
     def OpenFile(self, timeStep):
@@ -124,6 +142,26 @@ class OsirisFieldReader(FieldReaderBase):
 
 
 class HiPACEFieldReader(FieldReaderBase):
+    def __init__(self, location, speciesName, dataName):
+        FieldReaderBase.__init__(self, location, speciesName, dataName)
+
+    def ReadBasicData(self):
+        raise NotImplementedError
+        
+    def ReadInternalName(self, file_content):
+        raise NotImplementedError
+
+    def DetermineFieldDimension(self, file_content):
+        raise NotImplementedError
+
+    def OpenFileAndReadData(self):
+        raise NotImplementedError
+
+    def OpenFileAndReadUnits(self):
+        raise NotImplementedError
+
+
+class PIConGPUFieldReader(FieldReaderBase):
     def __init__(self, location, speciesName, dataName):
         FieldReaderBase.__init__(self, location, speciesName, dataName)
 

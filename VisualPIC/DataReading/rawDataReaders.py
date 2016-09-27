@@ -45,6 +45,16 @@ class RawDataReaderBase(DataReader):
             self.OpenFileAndReadUnits()
         return self.dataUnits
 
+    def GetTime(self, timeStep):
+        if timeStep != self.currentTimeStep:
+            self.currentTimeStep = timeStep
+            self.OpenFileAndReadData()
+        return self.currentTime
+
+    def GetTimeUnits(self):
+        if self.timeUnits == "":
+            self.OpenFileAndReadUnits()
+        return self.timeUnits
 
 class OsirisRawDataReader(RawDataReaderBase):
     def __init__(self, location, speciesName, dataName, internalName):
@@ -53,14 +63,17 @@ class OsirisRawDataReader(RawDataReaderBase):
     def OpenFileAndReadData(self):
         file_content = self.OpenFile(self.currentTimeStep)
         self.data = np.array(file_content.get(self.internalName))
+        self.currentTime = file_content.attrs["TIME"][0]
         file_content.close()
 
     def OpenFileAndReadUnits(self):
         file_content = self.OpenFile(0)
         if sys.version_info[0] < 3:
             self.dataUnits = str(list(file_content[self.internalName].attrs["UNITS"])[0])
+            self.timeUnits = str(file_content.attrs["TIME UNITS"][0])
         else:
             self.dataUnits = str(list(file_content[self.internalName].attrs["UNITS"])[0])[2:-1].replace("\\\\","\\")
+            self.timeUnits = str(file_content.attrs["TIME UNITS"][0])[2:-1].replace("\\\\","\\")
         file_content.close()
 
     def OpenFile(self, timeStep):
@@ -88,3 +101,14 @@ class HiPACERawDataReader(RawDataReaderBase):
         file_path = os.path.join(self.location, fileName)
         file_content = h5py.File(file_path, 'r')
         return file_content
+
+
+class PIConGPURawDataReader(RawDataReaderBase):
+    def __init__(self, location, speciesName, dataName, internalName):
+        RawDataReaderBase.__init__(self, location, speciesName, dataName, internalName)
+
+    def OpenFileAndReadData(self):
+        raise NotImplementedError
+
+    def OpenFileAndReadUnits(self):
+        raise NotImplementedError

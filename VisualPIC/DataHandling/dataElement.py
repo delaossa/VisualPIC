@@ -21,11 +21,11 @@ from VisualPIC.DataReading.dataReader import DataReader
 
 class DataElement(object):
     """Base class for all data elements (fields and rawDataSets)"""
-    def __init__(self, simulationCode, name, location, totalTimeSteps, speciesName = "", internalName = ""):
+    def __init__(self, simulationCode, name, location, timeSteps, speciesName = "", internalName = ""):
         self.dataName = name
         self.dataLocation = location
         self.speciesName = speciesName
-        self.totalTimeSteps = totalTimeSteps
+        self.timeSteps = timeSteps # array of integers
         self.dataReader = None # Each subclass will load its own
         
     def GetName(self):
@@ -34,12 +34,18 @@ class DataElement(object):
     def GetSpeciesName(self):
         return self.speciesName
 
-    def GetTotalTimeSteps(self):
-        return self.totalTimeSteps
+    def GetTimeSteps(self):
+        return self.timeSteps
 
     def GetData(self, timeStep):
         return self.dataReader.GetData(timeStep)
         
     def GetDataUnits(self):
         return self.dataReader.GetDataUnits()
+
+    def GetTime(self, timeStep):
+        return self.dataReader.GetTime(timeStep)
+        
+    def GetTimeUnits(self):
+        return self.dataReader.GetTimeUnits()
 
