@@ -36,7 +36,7 @@ class FieldReaderBase(DataReader):
         self.axisUnits = {}
         self.axisData = {}
         self.ReadBasicData()
-    
+
     def GetData(self, timeStep):
         if timeStep != self.currentTimeStep:
             self.currentTimeStep = timeStep
@@ -92,7 +92,7 @@ class OsirisFieldReader(FieldReaderBase):
         self.ReadInternalName(file_content)
         self.DetermineFieldDimension(file_content)
         file_content.close()
-        
+
     def ReadInternalName(self, file_content):
         self.internalName = "/" + list(file_content.keys())[1]
 
@@ -147,7 +147,7 @@ class HiPACEFieldReader(FieldReaderBase):
 
     def ReadBasicData(self):
         raise NotImplementedError
-        
+
     def ReadInternalName(self, file_content):
         raise NotImplementedError
 
@@ -167,7 +167,7 @@ class PIConGPUFieldReader(FieldReaderBase):
 
     def ReadBasicData(self):
         raise NotImplementedError
-        
+
     def ReadInternalName(self, file_content):
         raise NotImplementedError
 
