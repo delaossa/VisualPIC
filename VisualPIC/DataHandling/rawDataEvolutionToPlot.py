@@ -24,21 +24,21 @@ class RawDataEvolutionToPlot:
         #self._unitConverter = unitConverter
         self._dataProperties = {
             "name":dataSetName,
-            "dataSetUnits":self._dataSet["units"], 
+            "dataSetUnits":self._dataSet["units"],
             "possibleDataSetUnits":self._GetPossibleDataSetUnits()
         }
-            
+
     def _GetPossibleDataSetUnits(self):
         return self._dataSet["units"]
-        
+
     def GetDataSetPlotData(self):
         return self._dataSet["values"]
-    
+
     def GetProperty(self, propertyName):
         return self._dataProperties[propertyName]
 
     def GetDataProperties(self):
         return self._dataProperties
-        
+
     def SetDataProperties(self, props):
         self._dataProperties = props

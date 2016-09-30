@@ -29,7 +29,7 @@ from VisualPIC.DataReading.dataReader import DataReader
 
 class RawDataReaderBase(DataReader):
     """Parent class for all rawDataReaders"""
-    __metaclass__  = abc.ABCMeta
+    __metaclass__ = abc.ABCMeta
     def __init__(self, location, speciesName, dataName, internalName):
         DataReader.__init__(self, location, speciesName, dataName, internalName)
         self.internalName = dataName
@@ -94,7 +94,23 @@ class HiPACERawDataReader(RawDataReaderBase):
         file_content.close()
 
     def OpenFileAndReadUnits(self):
-        self.dataUnits = ""
+        # TODO: complete unit declarations
+        sd_unit = r'c/\omega_p'
+        imp_unit = r'c/\omega_p'
+        q_unit = 'C'
+        time_unit = r'1/\omega_p'
+        sd_names = ['x1', 'x2', 'x3']
+        imp_names = ['p1', 'p2', 'p3']
+
+        if self.internalName in sd_names:
+            self.dataUnits = sd_unit
+            self.timeUnits = time_unit
+        if self.internalName in imp_names:
+            self.dataUnits = imp_unit
+            self.timeUnits = time_unit
+        if self.internalName == 'q':
+            self.dataUnits = q_unit
+            self.timeUnits = time_unit
 
     def OpenFile(self, timeStep):
         fileName = 'raw_{:}_{:06d}.h5'.format(self.speciesName, timeStep)

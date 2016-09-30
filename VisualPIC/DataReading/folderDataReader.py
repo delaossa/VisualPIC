@@ -212,24 +212,39 @@ class FolderDataReader:
         for raw_file in datalist:
             raw_data_list.append(raw_file[prefix_offset:suffix_offset])
 
-        speciesNames = set(raw_data_list)
+        species_names = set(raw_data_list)
 
-        for sname in speciesNames:
+        for sname in species_names:
             self.AddSpecies(Species(sname))
 
-            dataSetLocation = self._dataLocation
+            dataset_location = self._dataLocation
             filefilter = '*' + sname + '*'
-            speciesDataFiles = fnmatch.filter(datalist, filefilter)
-            speciesDataFiles.sort()
-            totalTimeSteps = len(speciesDataFiles)
-            file_path = os.path.join(self._dataLocation, speciesDataFiles[0])
+            species_datafiles = fnmatch.filter(datalist, filefilter)
+            species_datafiles.sort()
+            time_steps = self.GetTimeStepsInHiPACELocation(dataset_location)
+            file_path = os.path.join(self._dataLocation, species_datafiles[0])
 
             file_content = h5py.File(file_path, 'r')
-            for dataSetName in list(file_content):
-                raw_dset = RawDataSet(self._simulationCode, dataSetName,
-                                      dataSetLocation, totalTimeSteps, sname,
-                                      dataSetName)
+            for dset_name in list(file_content):
+                raw_dset = RawDataSet(self._simulationCode, dset_name,
+                                      dataset_location, time_steps, sname,
+                                      dset_name)
                 self.AddRawDataToSpecies(sname, raw_dset)
+
+    def GetTimeStepsInHiPACELocation(self, location):
+        list_filenames = os.listdir(location)
+        # filter only .h5 files
+        h5files = list()
+        for file in list_filenames:
+            if file.endswith(".h5"):
+                h5files.append(file)
+        time_steps = np.zeros(len(h5files))
+        i = 0
+        for file in h5files:
+            time_step = int(file[-9:-3])
+            time_steps[i] = time_step
+            i += 1
+        return time_steps.astype(np.int64)
 
     def LoadPIConGPUData(self):
         """PIConGPU loader"""
