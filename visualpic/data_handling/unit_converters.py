@@ -297,7 +297,7 @@ class HiPACEUnitConverter(UnitConverter):
                 'c/\\omega_p': [ct.c/w_p, 'm'],
                 'E_0': [E_0, 'V/m'],
                 'n_0': [ct.e * self.plasma_density, 'C/m^3'],
-                'm_ec': [ct.m_e*ct.c, 'J*s/m']
+                'm_ec': [1., 'm_e*c']
                 }
         else:
             self.hipace_unit_conversion = None
