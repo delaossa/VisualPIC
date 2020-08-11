@@ -594,7 +594,8 @@ class OpenPMDFieldReader(FieldReader):
             return 'V/m'
         elif field == 'B':
             return 'T'
-        elif field == 'rho':
+        # elif field == 'rho':
+        elif 'rho' in field:
             return 'C/m^3'
         elif field == 'J':
             return 'A'
