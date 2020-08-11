@@ -159,3 +159,26 @@ norm_vector_pot = {'name': 'a',
 
 
 derived_field_definitions.append(norm_vector_pot)
+
+
+# Normalized vector potential
+def calculate_norm_vector_pot_simple(data_list, sim_geometry, sim_params):
+    l_0 = sim_params['lambda_0']
+    Ex = data_list[0]
+    E2 = Ex**2
+    k_0 = 2. * np.pi / l_0
+    A = np.sqrt(E2) / k_0
+    return  A / ((ct.m_e * ct.c**2) / ct.e)
+
+
+norm_vector_pot = {'name': 'a_simple',
+                   'units': '',
+                   'requirements': {'1d': ['Ex'],
+                                    '2dcartesian': ['Ex'],
+                                    '3dcartesian': ['Ex'],
+                                    '2dcylindrical': [],
+                                    'thetaMode': ['Er']},
+                   'recipe': calculate_norm_vector_pot_simple}
+
+
+derived_field_definitions.append(norm_vector_pot)
