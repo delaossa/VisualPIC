@@ -65,7 +65,7 @@ class OpenPMDFolderScanner(FolderScanner):
 
     "Folder scanner class for openPMD data."
 
-    def __init__(self, opmd_backend='h5py'):
+    def __init__(self, opmd_backend='openpmd-api'):
         """
         Initialize the folder scanner and assign corresponding data readers
         and unit converter.
@@ -246,21 +246,22 @@ class OpenPMDFolderScanner(FolderScanner):
         -------
         A string with the VisualPIC name.
         """
-        name_relations = {'E/z': 'Ez',
-                          'E/x': 'Ex',
-                          'E/y': 'Ey',
-                          'E/r': 'Er',
-                          'E/t': 'Et',
-                          'B/z': 'Bz',
-                          'B/x': 'Bx',
-                          'B/y': 'By',
-                          'B/r': 'Br',
-                          'B/t': 'Bt',
-                          'J/z': 'Jz',
-                          'J/x': 'Jx',
-                          'J/y': 'Jy',
-                          'J/r': 'Jr',
-                          'J/t': 'Jt',
+        opmd_name = opmd_name.lower()
+        name_relations = {'e/z': 'Ez',
+                          'e/x': 'Ex',
+                          'e/y': 'Ey',
+                          'e/r': 'Er',
+                          'e/t': 'Et',
+                          'b/z': 'Bz',
+                          'b/x': 'Bx',
+                          'b/y': 'By',
+                          'b/r': 'Br',
+                          'b/t': 'Bt',
+                          'j/z': 'Jz',
+                          'j/x': 'Jx',
+                          'j/y': 'Jy',
+                          'j/r': 'Jr',
+                          'j/t': 'Jt',
                           'rho': 'rho',
                           'a_mod': 'a_mod',
                           'a_phase': 'a_phase',
