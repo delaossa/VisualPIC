@@ -169,6 +169,8 @@ class DataContainer():
             'units': a string with the units of the field.
             'requirements': a dict containing the list of required fields
                 with the geometry type of the data as keys.
+                Particle species can be required as well using the
+                key 'species'.
             'recipe': a callable function to calculate the derived field
                 from the required fields.
         """
@@ -181,9 +183,17 @@ class DataContainer():
                 for field_name in required_fields:
                     base_fields.append(self.get_field(field_name))
 
+            species = []
+            if 'species' in derived_field['requirements']:
+                species_names = self.get_list_of_species()
+                required_species = derived_field['requirements']['species']
+                if set(required_species).issubset(species_names):
+                    for spc in required_species:
+                        species.append(self.get_species(spc))
+
             self.derived_fields.append(DerivedField(
                 derived_field, sim_geometry, self.sim_params,
-                base_fields))
+                base_fields, species))
 
     def _set_folder_scanner(self):
         """Return the folder scanner corresponding to the simulation code."""

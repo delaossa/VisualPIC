@@ -85,11 +85,13 @@ class FolderField(Field):
 
 
 class DerivedField(Field):
-    def __init__(self, field_dict, sim_geometry, sim_params, base_fields):
+    def __init__(self, field_dict, sim_geometry, sim_params, 
+                 base_fields, species=[]):
         self.field_dict = field_dict
         self.sim_geometry = sim_geometry
         self.sim_params = sim_params
         self.base_fields = base_fields
+        self.species = species
         field_timesteps = get_common_timesteps(base_fields)
         field_name = field_dict['name']
         unit_converter = base_fields[0].unit_converter
@@ -100,6 +102,7 @@ class DerivedField(Field):
                  slice_j=0.5, slice_dir_i=None, slice_dir_j=None, m='all',
                  theta=0, max_resolution_3d=None, only_metadata=False):
         field_data = []
+        field_md = []
         for field in self.base_fields:
             fld, fld_md = field.get_data(
                 time_step, field_units='SI',
@@ -108,9 +111,24 @@ class DerivedField(Field):
                 max_resolution_3d=max_resolution_3d,
                 only_metadata=only_metadata)
             field_data.append(fld)
+            field_md.append(fld_md)
+
+        spc_data = []
+        for spc in self.species:
+            datadict = spc.get_data(time_step, ['x', 'y', 'z', 'q'])
+            darray, mdarray = zip(*datadict.values())
+            spc_data.append(darray)
+
         if not only_metadata:
-            fld = self.field_dict['recipe'](field_data, self.sim_geometry,
-                                            self.sim_params)
+            if len(self.species) == 0:
+                fld = self.field_dict['recipe'](field_data, 
+                                                self.sim_geometry,
+                                                self.sim_params)
+            else:
+                fld = self.field_dict['recipe'](spc_data, field_md, 
+                                                self.sim_geometry,
+                                                self.sim_params)
+
         fld_md['field']['units'] = self.field_dict['units']
         # perform unit conversion
         unit_list = [field_units, axes_units, time_units]
