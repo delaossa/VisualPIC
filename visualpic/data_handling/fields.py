@@ -125,10 +125,12 @@ class DerivedField(Field):
                                                 self.sim_geometry,
                                                 self.sim_params)
             else:
-                fld = self.field_dict['recipe'](spc_data, field_md, 
+                fld, fmd = self.field_dict['recipe'](spc_data, 
+                                                field_md, 
                                                 self.sim_geometry,
                                                 self.sim_params)
-
+                fld_md = fmd
+ 
         fld_md['field']['units'] = self.field_dict['units']
         # perform unit conversion
         unit_list = [field_units, axes_units, time_units]
