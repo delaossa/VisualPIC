@@ -257,6 +257,7 @@ class OpenPMDFolderScanner(FolderScanner):
                           'b/y': 'By',
                           'b/r': 'Br',
                           'b/t': 'Bt',
+                          'ez': 'Ez',  # HiPACE++ uses `Ez` for the fields
                           'j/z': 'Jz',
                           'j/x': 'Jx',
                           'j/y': 'Jy',
