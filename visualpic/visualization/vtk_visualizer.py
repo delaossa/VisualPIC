@@ -1205,6 +1205,7 @@ class VolumetricField():
 
     def set_colormap(self, cmap):
         self.cmap = cmap
+        cmap = self.get_colormap()
         self._set_vtk_colormap(cmap)
 
     def get_optimized_opacity(self, time_step, bins=11,
